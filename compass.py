@@ -589,7 +589,7 @@ class CompassApp(Adw.Application):
         dialog.set_developer_name("Chris")
         dialog.set_version("1.0")
         dialog.set_comments("Compass app for Phosh / Linux Mobile")
-        dialog.set_license_type(Gtk.License.GPL_3_0)
+        dialog.set_license_type(Gtk.License.MIT_X11)
         dialog.present(self.get_active_window())
 
 

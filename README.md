@@ -61,4 +61,4 @@ Tap the **Calibrate** button in the top-left of the header. A confirmation dialo
 
 ## License
 
-GPL-3.0
+MIT
