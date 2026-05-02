@@ -53,7 +53,10 @@ def _(key, lang): return _T.get(key, {}).get(lang, key)
 def load_settings():
     try:
         with open(CONFIG_FILE) as f:
-            return json.load(f)
+            data = json.load(f)
+        if not isinstance(data, dict):
+            raise ValueError("settings must be a JSON object")
+        return data
     except Exception:
         return {"theme": "auto", "lang": "en", "auto_cal": True}
 
