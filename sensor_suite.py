@@ -738,7 +738,7 @@ class GForceWidget(Gtk.DrawingArea):
 
 class SettingsWindow(Adw.PreferencesWindow):
 
-    def __init__(self, parent, settings, lang, on_change, on_calibrate):
+    def __init__(self, parent, settings, lang, on_change):
         super().__init__(transient_for=parent, modal=True)
         self.set_title(_("s_ttl", lang))
         self._settings = settings
@@ -767,18 +767,6 @@ class SettingsWindow(Adw.PreferencesWindow):
 
         grp2 = Adw.PreferencesGroup(title=_("s_cal", lang))
         page.add(grp2)
-
-        cal_row = Adw.ActionRow(title=_("s_c_ttl", lang),
-                                subtitle=_("s_c_sub", lang))
-        cal_btn = Gtk.Button(label=_("s_c_btn", lang))
-        cal_btn.add_css_class("suggested-action")
-        cal_btn.set_valign(Gtk.Align.CENTER)
-        def _on_cal(_b):
-            self.close()
-            on_calibrate()
-        cal_btn.connect("clicked", _on_cal)
-        cal_row.add_suffix(cal_btn)
-        grp2.add(cal_row)
 
         ac_row = Adw.ActionRow(title=_("s_ac", lang), subtitle=_("s_ac_sub", lang))
         ac_sw  = Gtk.Switch()
@@ -849,6 +837,10 @@ class SensorSuiteWindow(Adw.ApplicationWindow):
         header.set_centering_policy(Adw.CenteringPolicy.STRICT)
         toolbar_view.add_top_bar(header)
 
+        self._cal_btn = Gtk.Button(label="Calibrate")
+        self._cal_btn.connect("clicked", self._on_cal_btn_clicked)
+        header.pack_start(self._cal_btn)
+
         menu_btn = Gtk.MenuButton()
         menu_btn.set_icon_name("open-menu-symbolic")
         menu_btn.set_menu_model(self._build_menu())
@@ -867,6 +859,9 @@ class SensorSuiteWindow(Adw.ApplicationWindow):
         bar.set_stack(self._stack)
         bar.set_reveal(True)
         toolbar_view.add_bottom_bar(bar)
+
+        self._stack.connect("notify::visible-child", lambda *_: self._update_cal_btn())
+        self._update_cal_btn()
 
         # ── Load calibration ─────────────────────────────────────────────────
         cal_roll  = settings.get("cal_roll",  0.0)
@@ -895,7 +890,7 @@ class SensorSuiteWindow(Adw.ApplicationWindow):
         box.set_margin_end(16)
 
         self._calib_bar = Adw.Banner()
-        self._calib_bar.connect("button-clicked", lambda b: b.set_revealed(False))
+        self._calib_bar.connect("button-clicked", self._on_calib_bar_button)
         self._calib_bar.set_revealed(False)
         box.append(self._calib_bar)
 
@@ -989,10 +984,44 @@ class SensorSuiteWindow(Adw.ApplicationWindow):
 
     def _build_menu(self):
         menu = Gio.Menu()
-        menu.append("Calibrate compass", "app.calibrate")
-        menu.append("Settings",          "app.settings")
-        menu.append("About",             "app.about")
+        menu.append("Settings", "app.settings")
+        menu.append("About",    "app.about")
         return menu
+
+    def _update_cal_btn(self):
+        page = self._stack.get_visible_child_name()
+        self._cal_btn.set_visible(page in ("compass", "spirit_level"))
+
+    def _on_cal_btn_clicked(self, _btn):
+        page = self._stack.get_visible_child_name()
+        if page == "compass":
+            dialog = Adw.AlertDialog(
+                heading="Calibrate Compass",
+                body="Hold the device flat and slowly draw a figure-8 in the air until all three stars are filled.",
+            )
+            dialog.add_response("cancel", "Cancel")
+            dialog.add_response("start", "Start")
+            dialog.set_response_appearance("start", Adw.ResponseAppearance.SUGGESTED)
+            dialog.set_default_response("start")
+            dialog.set_close_response("cancel")
+            dialog.connect("response", lambda d, r: self.start_compass_calibration() if r == "start" else None)
+            dialog.present(self)
+        elif page == "spirit_level":
+            dialog = Adw.AlertDialog(
+                heading="Calibrate Spirit Level",
+                body="Place the device in the reference position, then tap the screen to set the zero point.",
+            )
+            dialog.add_response("cancel", "Cancel")
+            dialog.add_response("start", "Start")
+            dialog.set_response_appearance("start", Adw.ResponseAppearance.SUGGESTED)
+            dialog.set_default_response("start")
+            dialog.set_close_response("cancel")
+            dialog.connect("response", lambda d, r: self._enter_level_cal_mode() if r == "start" else None)
+            dialog.present(self)
+
+    def _on_calib_bar_button(self, banner):
+        banner.set_revealed(False)
+        self._calibrating = False
 
     # ── Sensor init ────────────────────────────────────────────────────────────
 
@@ -1159,7 +1188,6 @@ class SensorSuiteWindow(Adw.ApplicationWindow):
             settings=self._settings,
             lang=self._lang,
             on_change=self._on_settings_change,
-            on_calibrate=self._enter_level_cal_mode,
         ).present()
 
     def _on_settings_change(self):
@@ -1199,9 +1227,8 @@ class SensorSuiteApp(Adw.Application):
 
     def _add_actions(self):
         for name, handler in [
-            ("calibrate", self._on_calibrate),
-            ("settings",  self._on_settings),
-            ("about",     self._on_about),
+            ("settings", self._on_settings),
+            ("about",    self._on_about),
         ]:
             a = Gio.SimpleAction.new(name, None)
             a.connect("activate", handler)
@@ -1209,10 +1236,6 @@ class SensorSuiteApp(Adw.Application):
 
     def _on_activate(self, app):
         SensorSuiteWindow(settings=load_settings(), application=app).present()
-
-    def _on_calibrate(self, action, param):
-        win = self.get_active_window()
-        if win: win.start_compass_calibration()
 
     def _on_settings(self, action, param):
         win = self.get_active_window()

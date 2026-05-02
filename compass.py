@@ -408,6 +408,10 @@ class CompassWindow(Adw.ApplicationWindow):
         header.set_centering_policy(Adw.CenteringPolicy.STRICT)
         toolbar_view.add_top_bar(header)
 
+        cal_btn = Gtk.Button(label="Calibrate")
+        cal_btn.connect("clicked", self._on_calibrate_clicked)
+        header.pack_start(cal_btn)
+
         menu_btn = Gtk.MenuButton()
         menu_btn.set_icon_name("open-menu-symbolic")
         menu_btn.set_menu_model(self._build_menu())
@@ -436,7 +440,7 @@ class CompassWindow(Adw.ApplicationWindow):
         content_box.append(self._cardinal_label)
 
         self._calib_bar = Adw.Banner()
-        self._calib_bar.connect("button-clicked", lambda b: b.set_revealed(False))
+        self._calib_bar.connect("button-clicked", self._on_calib_bar_button)
         self._calib_bar.set_revealed(False)
         content_box.append(self._calib_bar)
 
@@ -457,9 +461,38 @@ class CompassWindow(Adw.ApplicationWindow):
 
     def _build_menu(self):
         menu = Gio.Menu()
-        menu.append("Calibrate", "app.calibrate")
         menu.append("About Compass", "app.about")
         return menu
+
+    def _on_calibrate_clicked(self, _btn):
+        dialog = Adw.AlertDialog(
+            heading="Calibrate Compass",
+            body="Hold the device flat and slowly draw a figure-8 in the air until all three stars are filled.",
+        )
+        dialog.add_response("cancel", "Cancel")
+        dialog.add_response("start", "Start")
+        dialog.set_response_appearance("start", Adw.ResponseAppearance.SUGGESTED)
+        dialog.set_default_response("start")
+        dialog.set_close_response("cancel")
+        dialog.connect("response", self._on_cal_dialog_response)
+        dialog.present(self)
+
+    def _on_cal_dialog_response(self, _dialog, response):
+        if response != "start":
+            return
+        if self._sensor:
+            self._sensor.release()
+            self._sensor = None
+        self._calib_label.set_text(f"Calibration {self._CALIB_STARS[0]}")
+        self._calib_bar.set_title("Hold device flat — slowly draw a figure-8 in the air")
+        self._calib_bar.set_button_label("Skip")
+        self._calib_bar.set_revealed(True)
+        self._calibrating = True
+        GLib.timeout_add(300, lambda: self._restart_sensor() or False)
+
+    def _on_calib_bar_button(self, banner):
+        banner.set_revealed(False)
+        self._calibrating = False
 
     def _restart_sensor(self):
         self._sensor = SensorPoller(self._on_heading)
@@ -539,30 +572,12 @@ class CompassApp(Adw.Application):
         self._add_actions()
 
     def _add_actions(self):
-        calibrate = Gio.SimpleAction.new("calibrate", None)
-        calibrate.connect("activate", self._on_calibrate)
-        self.add_action(calibrate)
-
         about_action = Gio.SimpleAction.new("about", None)
         about_action.connect("activate", self._on_about)
         self.add_action(about_action)
 
     def _on_activate(self, app):
         CompassWindow(application=app).present()
-
-    def _on_calibrate(self, action, param):
-        win = self.get_active_window()
-        if not win:
-            return
-        if win._sensor:
-            win._sensor.release()
-            win._sensor = None
-        win._calib_label.set_text(f"Calibration {CompassWindow._CALIB_STARS[0]}")
-        win._calib_bar.set_title("Hold device flat — slowly draw a figure-8 in the air")
-        win._calib_bar.set_button_label("Skip")
-        win._calib_bar.set_revealed(True)
-        win._calibrating = True
-        GLib.timeout_add(300, lambda: win._restart_sensor() or False)
 
     def _on_about(self, action, param):
         dialog = Adw.AboutDialog()

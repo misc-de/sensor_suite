@@ -13,7 +13,7 @@ A GTK4/Libadwaita sensor display app for Linux mobile devices (Phosh, FuriOS, Dr
 ## Requirements
 
 - Python 3.10+
-- GTK 4 + Libadwaita (`python-gobject`, `gtk4`, `libadwaita`)
+- GTK 4 + Libadwaita ≥ 1.5 (`python-gobject`, `gtk4`, `libadwaita`)
 - One of the following sensor backends:
   - `iio-sensor-proxy` / `hadess-sensorfw-proxy` (D-Bus)
   - `sensorfwd` (FuriOS / Droidian, via `/run/sensord.sock`)
@@ -53,9 +53,11 @@ python3 sensor_suite.py
 
 ## Calibration
 
-**Compass** — open the hamburger menu → *Calibrate compass*, then slowly draw a figure-8 in the air until all three stars are filled.
+Tap the **Calibrate** button in the top-left of the header. A confirmation dialog appears before anything starts.
 
-**Spirit Level** — open Settings → *Set zero point*, then tap the screen when the device is in the reference position. Auto-calibration on startup can be enabled in Settings.
+**Compass** — hold the device flat and slowly draw a figure-8 in the air until all three stars are filled. Tap *Skip* in the banner to abort at any time.
+
+**Spirit Level** — place the device in the reference position, then tap the screen to set the zero point. Auto-calibration on startup can be enabled in Settings (⚙ top-right).
 
 ## License
 

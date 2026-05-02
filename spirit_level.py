@@ -340,12 +340,11 @@ class VerticalLevelWidget(Gtk.DrawingArea):
 
 class SettingsWindow(Adw.PreferencesWindow):
 
-    def __init__(self, parent, settings, lang, on_change, on_calibrate):
+    def __init__(self, parent, settings, lang, on_change):
         super().__init__(transient_for=parent, modal=True)
         self.set_title(_("s_ttl", lang))
-        self._settings     = settings
-        self._on_change    = on_change
-        self._on_calibrate = on_calibrate
+        self._settings  = settings
+        self._on_change = on_change
 
         page = Adw.PreferencesPage()
         self.add(page)
@@ -369,17 +368,6 @@ class SettingsWindow(Adw.PreferencesWindow):
 
         grp2 = Adw.PreferencesGroup(title=_("s_cal", lang))
         page.add(grp2)
-
-        cal_row = Adw.ActionRow(title=_("s_c_ttl", lang))
-        cal_row.set_subtitle(_("s_c_sub", lang))
-        cal_btn = Gtk.Button(label=_("s_c_btn", lang))
-        cal_btn.add_css_class("suggested-action")
-        cal_btn.set_valign(Gtk.Align.CENTER)
-        def _on_cal(_b):
-            self.close(); on_calibrate()
-        cal_btn.connect("clicked", _on_cal)
-        cal_row.add_suffix(cal_btn)
-        grp2.add(cal_row)
 
         ac_row = Adw.ActionRow(title=_("s_ac", lang))
         ac_row.set_subtitle(_("s_ac_sub", lang))
@@ -429,6 +417,10 @@ class SpiritLevelWindow(Adw.ApplicationWindow):
         header = Adw.HeaderBar()
         header.set_centering_policy(Adw.CenteringPolicy.STRICT)
         toolbar_view.add_top_bar(header)
+
+        cal_btn = Gtk.Button(label="Calibrate")
+        cal_btn.connect("clicked", self._on_calibrate_clicked)
+        header.pack_start(cal_btn)
 
         settings_btn = Gtk.Button(icon_name="preferences-system-symbolic",
                                   tooltip_text="Settings")
@@ -556,6 +548,19 @@ class SpiritLevelWindow(Adw.ApplicationWindow):
             else:            self._detail_label.set_text(_("tilted", lang))
         return True
 
+    def _on_calibrate_clicked(self, _btn):
+        dialog = Adw.AlertDialog(
+            heading="Calibrate Spirit Level",
+            body="Place the device in the reference position, then tap the screen to set the zero point.",
+        )
+        dialog.add_response("cancel", "Cancel")
+        dialog.add_response("start", "Start")
+        dialog.set_response_appearance("start", Adw.ResponseAppearance.SUGGESTED)
+        dialog.set_default_response("start")
+        dialog.set_close_response("cancel")
+        dialog.connect("response", lambda d, r: self._enter_cal_mode() if r == "start" else None)
+        dialog.present(self)
+
     def _enter_cal_mode(self):
         self._waiting_cal = True
         self._cal_hint.set_text(_("cal_tap", self._lang))
@@ -585,7 +590,6 @@ class SpiritLevelWindow(Adw.ApplicationWindow):
             settings=self._settings,
             lang=self._lang,
             on_change=self._on_settings_change,
-            on_calibrate=self._enter_cal_mode,
         ).present()
 
     def _on_settings_change(self):
