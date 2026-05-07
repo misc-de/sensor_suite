@@ -41,9 +41,6 @@ _T = {
     "s_c_sub":  {"de": "Aktuelle Lage als Referenz übernehmen",
                  "en": "Use current position as reference"},
     "s_c_btn":  {"de": "Kalibrieren",        "en": "Calibrate"},
-    "s_ac":     {"de": "Automatisch beim Start", "en": "Auto-calibrate on startup"},
-    "s_ac_sub": {"de": "Gerät beim Start kurz flach halten",
-                 "en": "Keep device flat briefly at startup"},
     "cal_tap":  {"de": "Bildschirm antippen – Nullpunkt setzen",
                  "en": "Tap screen to set zero point"},
 }
@@ -58,7 +55,7 @@ def load_settings():
             raise ValueError("settings must be a JSON object")
         return data
     except Exception:
-        return {"theme": "auto", "lang": "en", "auto_cal": True}
+        return {"theme": "auto", "lang": "en"}
 
 def save_settings(s):
     os.makedirs(CONFIG_DIR, exist_ok=True)
@@ -681,7 +678,6 @@ class GForceWidget(Gtk.DrawingArea):
         radius = min(w, h) / 2 - margin
         if radius < 20: return
 
-        fs_axis = max(radius * 0.115, 10.0)
         fs_val  = max(radius * 0.150, 12.0)
         fs_ring = max(radius * 0.090,  8.0)
         lc      = margin * 0.52
@@ -721,20 +717,15 @@ class GForceWidget(Gtk.DrawingArea):
         cr.arc(dot_sx, dot_sy, dot_r*0.35, 0, 2*math.pi)
         cr.set_source_rgba(1.0, 1.0, 1.0, 0.25); cr.fill()
 
-        line_gap = (fs_axis + fs_val) * 0.65
-
-        def label_pair(axis, value_str, tx, ty):
-            cr.select_font_face("Sans", 0, 1); cr.set_font_size(fs_axis)
-            cr.set_source_rgba(r, g, b, 0.90)
-            self._text_center(cr, axis, tx, ty - line_gap/2)
+        def value_label(value_str, tx, ty):
             cr.select_font_face("Sans", 0, 0); cr.set_font_size(fs_val)
             cr.set_source_rgba(0.92, 0.92, 0.92, 1.0)
-            self._text_center(cr, value_str, tx, ty + line_gap/2)
+            self._text_center(cr, value_str, tx, ty)
 
-        label_pair("X",   f"{self._x:+.2f}g", cx + radius + lc, cy)
-        label_pair("Y",   f"{self._y:+.2f}g", cx, cy - radius - lc)
-        label_pair("Z",   f"{self._z:+.2f}g", cx - radius - lc, cy)
-        label_pair("|a|", f"{mag:.2f}g",       cx, cy + radius + lc)
+        value_label(f"{self._x:+.2f}g", cx + radius + lc, cy)
+        value_label(f"{self._y:+.2f}g", cx, cy - radius - lc)
+        value_label(f"{self._z:+.2f}g", cx - radius - lc, cy)
+        value_label(f"{mag:.2f}g",      cx, cy + radius + lc)
 
 
 # ── Settings window ────────────────────────────────────────────────────────────
@@ -767,20 +758,6 @@ class SettingsWindow(Adw.PreferencesWindow):
                          lambda row, _: [self._set_lang(["de","en"][row.get_selected()]),
                                          on_change()])
         grp.add(lang_row)
-
-        grp2 = Adw.PreferencesGroup(title=_("s_cal", lang))
-        page.add(grp2)
-
-        ac_row = Adw.ActionRow(title=_("s_ac", lang), subtitle=_("s_ac_sub", lang))
-        ac_sw  = Gtk.Switch()
-        ac_sw.set_valign(Gtk.Align.CENTER)
-        ac_sw.set_active(settings.get("auto_cal", True))
-        ac_sw.connect("notify::active",
-                      lambda sw, _: [settings.__setitem__("auto_cal", sw.get_active()),
-                                     save_settings(settings)])
-        ac_row.add_suffix(ac_sw)
-        ac_row.set_activatable_widget(ac_sw)
-        grp2.add(ac_row)
 
     def _on_theme(self, row, _):
         theme = ["auto", "light", "dark"][row.get_selected()]
@@ -1033,8 +1010,6 @@ class SensorSuiteWindow(Adw.ApplicationWindow):
         self._accel = AccelBackend()
         if self._accel.available:
             self._accel.add_callback(self._on_accel)
-            if self._settings.get("auto_cal", True):
-                GLib.timeout_add(2000, self._auto_calibrate_level)
         else:
             tid = GLib.timeout_add(50, self._demo_accel_tick)
             self._demo_timers.append(tid)
@@ -1117,10 +1092,6 @@ class SensorSuiteWindow(Adw.ApplicationWindow):
         self._gty = math.cos(t * 1.3) * 0.4
         self._gtz = 1.0 + math.sin(t * 2.9) * 0.15
         return True
-
-    def _auto_calibrate_level(self):
-        self._do_calibrate_level(show_dialog=False)
-        return False
 
     def _do_calibrate_level(self, show_dialog=True):
         self._level_2d.calibrate()
@@ -1263,7 +1234,7 @@ class SensorSuiteApp(Adw.Application):
         dialog.set_developer_name("Chris")
         dialog.set_version("1.0")
         dialog.set_comments("Compass · Spirit Level · G-Force")
-        dialog.set_license_type(Gtk.License.MIT_X11)
+        dialog.set_license("MIT License")
         dialog.present(self.get_active_window())
 
 

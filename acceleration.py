@@ -128,7 +128,6 @@ class GForceWidget(Gtk.DrawingArea):
         if radius < 20:
             return
 
-        fs_axis  = max(radius * 0.115, 10.0)
         fs_val   = max(radius * 0.150, 12.0)
         fs_ring  = max(radius * 0.090,  8.0)
         lc       = margin * 0.52
@@ -168,20 +167,15 @@ class GForceWidget(Gtk.DrawingArea):
         cr.arc(dot_sx, dot_sy, dot_r * 0.35, 0, 2 * math.pi)
         cr.set_source_rgba(1.0, 1.0, 1.0, 0.25); cr.fill()
 
-        line_gap = (fs_axis + fs_val) * 0.65
-
-        def label_pair(axis, value_str, tx, ty):
-            cr.select_font_face("Sans", 0, 1); cr.set_font_size(fs_axis)
-            cr.set_source_rgba(r, g, b, 0.90)
-            self._text_center(cr, axis, tx, ty - line_gap / 2)
+        def value_label(value_str, tx, ty):
             cr.select_font_face("Sans", 0, 0); cr.set_font_size(fs_val)
             cr.set_source_rgba(0.92, 0.92, 0.92, 1.0)
-            self._text_center(cr, value_str, tx, ty + line_gap / 2)
+            self._text_center(cr, value_str, tx, ty)
 
-        label_pair("X",   f"{self._x:+.2f}g", cx + radius + lc, cy)
-        label_pair("Y",   f"{self._y:+.2f}g", cx, cy - radius - lc)
-        label_pair("Z",   f"{self._z:+.2f}g", cx - radius - lc, cy)
-        label_pair("|a|", f"{mag:.2f}g",       cx, cy + radius + lc)
+        value_label(f"{self._x:+.2f}g", cx + radius + lc, cy)
+        value_label(f"{self._y:+.2f}g", cx, cy - radius - lc)
+        value_label(f"{self._z:+.2f}g", cx - radius - lc, cy)
+        value_label(f"{mag:.2f}g",      cx, cy + radius + lc)
 
 
 class AccelerationWindow(Adw.ApplicationWindow):

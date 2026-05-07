@@ -33,9 +33,6 @@ _T = {
     "s_c_sub":  {"de": "Aktuelle Lage als Referenz übernehmen",
                  "en": "Use current position as reference"},
     "s_c_btn":  {"de": "Kalibrieren",        "en": "Calibrate"},
-    "s_ac":     {"de": "Automatisch beim Start", "en": "Auto-calibrate on startup"},
-    "s_ac_sub": {"de": "Gerät beim Start kurz flach halten",
-                 "en": "Keep device flat briefly at startup"},
     "cal_tap":  {"de": "Bildschirm antippen – Nullpunkt setzen",
                  "en": "Tap screen to set zero point"},
 }
@@ -52,7 +49,7 @@ def load_settings():
             raise ValueError("settings must be a JSON object")
         return data
     except Exception:
-        return {"theme": "auto", "lang": "en", "auto_cal": True}
+        return {"theme": "auto", "lang": "en"}
 
 
 def save_settings(s):
@@ -369,19 +366,6 @@ class SettingsWindow(Adw.PreferencesWindow):
         lang_row.connect("notify::selected", self._on_lang)
         grp.add(lang_row)
 
-        grp2 = Adw.PreferencesGroup(title=_("s_cal", lang))
-        page.add(grp2)
-
-        ac_row = Adw.ActionRow(title=_("s_ac", lang))
-        ac_row.set_subtitle(_("s_ac_sub", lang))
-        ac_sw = Gtk.Switch()
-        ac_sw.set_valign(Gtk.Align.CENTER)
-        ac_sw.set_active(settings.get("auto_cal", True))
-        ac_sw.connect("notify::active", self._on_auto_cal)
-        ac_row.add_suffix(ac_sw)
-        ac_row.set_activatable_widget(ac_sw)
-        grp2.add(ac_row)
-
     def _on_theme(self, row, _):
         theme = ["auto", "light", "dark"][row.get_selected()]
         self._settings["theme"] = theme
@@ -392,11 +376,6 @@ class SettingsWindow(Adw.PreferencesWindow):
         self._settings["lang"] = ["de", "en"][row.get_selected()]
         save_settings(self._settings)
         self._on_change()
-
-    def _on_auto_cal(self, sw, _):
-        self._settings["auto_cal"] = sw.get_active()
-        save_settings(self._settings)
-
 
 class SpiritLevelWindow(Adw.ApplicationWindow):
 
@@ -502,14 +481,8 @@ class SpiritLevelWindow(Adw.ApplicationWindow):
         self._backend = AccelBackend()
         if self._backend.available:
             self._backend.set_callback(self._on_accel)
-            if self._settings.get("auto_cal", True):
-                GLib.timeout_add(2000, self._auto_calibrate)
         else:
             GLib.timeout_add(50, self._demo_tick)
-        return False
-
-    def _auto_calibrate(self):
-        self._do_calibrate()
         return False
 
     def _demo_tick(self):

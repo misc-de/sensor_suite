@@ -106,7 +106,7 @@ class TestSettingsIO:
     def test_roundtrip(self, tmp_path, monkeypatch):
         monkeypatch.setattr(ss, "CONFIG_DIR",  str(tmp_path))
         monkeypatch.setattr(ss, "CONFIG_FILE", str(tmp_path / "settings.json"))
-        data = {"theme": "dark", "lang": "de", "auto_cal": False,
+        data = {"theme": "dark", "lang": "de",
                 "cal_roll": 1.5, "cal_pitch": -0.7}
         ss.save_settings(data)
         assert ss.load_settings() == data
@@ -114,7 +114,7 @@ class TestSettingsIO:
     def test_defaults_when_file_absent(self, tmp_path, monkeypatch):
         monkeypatch.setattr(ss, "CONFIG_FILE", str(tmp_path / "no_file.json"))
         s = ss.load_settings()
-        assert s == {"theme": "auto", "lang": "en", "auto_cal": True}
+        assert s == {"theme": "auto", "lang": "en"}
 
     def test_malformed_json_returns_defaults(self, tmp_path, monkeypatch):
         f = tmp_path / "settings.json"
@@ -127,13 +127,13 @@ class TestSettingsIO:
         nested = tmp_path / "a" / "b" / "c"
         monkeypatch.setattr(ss, "CONFIG_DIR",  str(nested))
         monkeypatch.setattr(ss, "CONFIG_FILE", str(nested / "settings.json"))
-        ss.save_settings({"theme": "auto", "lang": "en", "auto_cal": True})
+        ss.save_settings({"theme": "auto", "lang": "en"})
         assert (nested / "settings.json").exists()
 
     def test_float_calibration_values_preserved(self, tmp_path, monkeypatch):
         monkeypatch.setattr(ss, "CONFIG_DIR",  str(tmp_path))
         monkeypatch.setattr(ss, "CONFIG_FILE", str(tmp_path / "settings.json"))
-        data = {"theme": "auto", "lang": "en", "auto_cal": True,
+        data = {"theme": "auto", "lang": "en",
                 "cal_roll": 2.345678, "cal_pitch": -1.234567}
         ss.save_settings(data)
         loaded = ss.load_settings()
@@ -600,7 +600,7 @@ class TestPerformance:
             pytest.skip("GTK not available")
         monkeypatch.setattr(ss, "CONFIG_DIR",  str(tmp_path))
         monkeypatch.setattr(ss, "CONFIG_FILE", str(tmp_path / "settings.json"))
-        data = {"theme": "auto", "lang": "en", "auto_cal": True,
+        data = {"theme": "auto", "lang": "en",
                 "cal_roll": 1.23, "cal_pitch": -0.45}
         start = time.perf_counter()
         for _ in range(20):
