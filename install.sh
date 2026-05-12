@@ -15,6 +15,7 @@ fi
 mkdir -p "$INSTALL_DIR" "$ICON_DIR" "$DESKTOP_DIR"
 
 cp "$SCRIPT_DIR/sensor_suite.py" "$INSTALL_DIR/"
+cp "$SCRIPT_DIR/gps.py"          "$INSTALL_DIR/"
 cp "$SCRIPT_DIR/compass.py"      "$INSTALL_DIR/"
 cp "$SCRIPT_DIR/spirit_level.py" "$INSTALL_DIR/"
 cp "$SCRIPT_DIR/acceleration.py" "$INSTALL_DIR/"
