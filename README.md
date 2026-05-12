@@ -6,11 +6,9 @@ A GTK4/Libadwaita sensor display app for Linux mobile devices (Phosh, FuriOS, Dr
 
 ## Features
 
-- **Compass** — magnetic heading with animated needle, calibration support
-- **GPS altitude** — altitude above the compass when a GeoClue GPS fix is available
+- **Compass** — magnetic heading with animated needle, calibration support, altitude
 - **Spirit Level** — 2D bubble level + horizontal and vertical linear levels
 - **G-Force** — accelerometer display with X/Y/Z values, total magnitude, and GPS speed
-- **Swipe navigation** — switch between Compass, Spirit Level, and G-Force with horizontal swipes
 - **Metric / miles units** — switch speed and altitude units in Settings
 
 ⚠️ **AI-assisted project**  
