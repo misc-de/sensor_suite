@@ -11,7 +11,8 @@ gi.require_version("Adw", "1")
 
 from gi.repository import Gtk, Adw, GLib, Gio
 
-from gps import GeoLocationBackend, format_altitude
+from gps import (GeoLocationBackend, GPS_OK_COLOR, GPS_WAITING_COLOR,
+                 NO_GPS_SIGNAL, format_altitude)
 
 IIO_BASE = "/sys/bus/iio/devices"
 MAGN_KEYWORDS = ("magn", "compass", "ak09", "ak8", "mmc56", "mmc34",
@@ -446,10 +447,14 @@ class CompassWindow(Adw.ApplicationWindow):
 
         self._altitude_label = Gtk.Label()
         self._altitude_label.add_css_class("title-4")
-        self._altitude_label.add_css_class("dim-label")
         self._altitude_label.set_margin_top(8)
-        self._altitude_label.set_visible(False)
         content_box.append(self._altitude_label)
+
+        self._altitude_status_label = Gtk.Label(label=NO_GPS_SIGNAL)
+        self._altitude_status_label.add_css_class("caption")
+        self._altitude_status_label.add_css_class("dim-label")
+        self._altitude_status_label.set_margin_top(2)
+        content_box.append(self._altitude_status_label)
 
         self._calib_bar = Adw.Banner()
         self._calib_bar.connect("button-clicked", self._on_calib_bar_button)
@@ -470,6 +475,7 @@ class CompassWindow(Adw.ApplicationWindow):
 
         self._anim_timer = GLib.timeout_add(16, self._anim_tick)
         GLib.idle_add(self._init_sensor)
+        self._update_altitude_label()
 
     def _build_menu(self):
         menu = Gio.Menu()
@@ -562,9 +568,15 @@ class CompassWindow(Adw.ApplicationWindow):
 
     def _on_location(self, altitude_m, _speed_mps):
         self._altitude_m = altitude_m
+        self._update_altitude_label()
+
+    def _update_altitude_label(self):
+        has_altitude = self._altitude_m is not None
+        color = GPS_OK_COLOR if has_altitude else GPS_WAITING_COLOR
         text = format_altitude(self._altitude_m)
-        self._altitude_label.set_text(text)
-        self._altitude_label.set_visible(bool(text))
+        self._altitude_label.set_markup(
+            f'<span foreground="{color}">{GLib.markup_escape_text(text)}</span>')
+        self._altitude_status_label.set_text("" if has_altitude else NO_GPS_SIGNAL)
 
     @staticmethod
     def _to_cardinal(deg: float) -> str:

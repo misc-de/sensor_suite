@@ -7,7 +7,8 @@ gi.require_version("Adw", "1")
 
 from gi.repository import Gtk, Adw, GLib, Gio
 
-from gps import GeoLocationBackend, format_altitude, format_speed
+from gps import (GeoLocationBackend, GPS_OK_COLOR, GPS_WAITING_COLOR,
+                 NO_GPS_SIGNAL, format_altitude, format_speed)
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 IIO_BASE       = "/sys/bus/iio/devices"
@@ -913,10 +914,14 @@ class SensorSuiteWindow(Adw.ApplicationWindow):
 
         self._altitude_label = Gtk.Label()
         self._altitude_label.add_css_class("title-4")
-        self._altitude_label.add_css_class("dim-label")
         self._altitude_label.set_margin_top(8)
-        self._altitude_label.set_visible(False)
         box.append(self._altitude_label)
+
+        self._altitude_status_label = Gtk.Label()
+        self._altitude_status_label.add_css_class("caption")
+        self._altitude_status_label.add_css_class("dim-label")
+        self._altitude_status_label.set_margin_top(2)
+        box.append(self._altitude_status_label)
 
         self._calib_level_label = Gtk.Label()
         self._calib_level_label.add_css_class("caption")
@@ -1000,6 +1005,11 @@ class SensorSuiteWindow(Adw.ApplicationWindow):
         self._speed_unit_label.add_css_class("title-4")
         self._speed_unit_label.add_css_class("dim-label")
         box.append(self._speed_unit_label)
+
+        self._speed_status_label = Gtk.Label()
+        self._speed_status_label.add_css_class("caption")
+        self._speed_status_label.add_css_class("dim-label")
+        box.append(self._speed_status_label)
 
         self._gforce_widget = GForceWidget()
         box.append(self._gforce_widget)
@@ -1243,13 +1253,22 @@ class SensorSuiteWindow(Adw.ApplicationWindow):
 
     def _update_location_labels(self):
         if hasattr(self, "_altitude_label"):
+            has_altitude = self._altitude_m is not None
             text = format_altitude(self._altitude_m, self._unit_system())
-            self._altitude_label.set_text(text)
-            self._altitude_label.set_visible(bool(text))
+            self._set_colored_label(self._altitude_label, text, has_altitude)
+            self._altitude_status_label.set_text("" if has_altitude else NO_GPS_SIGNAL)
         if hasattr(self, "_speed_value_label"):
+            has_speed = self._speed_mps is not None
             value, unit = format_speed(self._speed_mps, self._unit_system())
-            self._speed_value_label.set_text(value)
+            self._set_colored_label(self._speed_value_label, value, has_speed)
             self._speed_unit_label.set_text(unit)
+            self._speed_status_label.set_text("" if has_speed else NO_GPS_SIGNAL)
+
+    @staticmethod
+    def _set_colored_label(label, text, has_signal):
+        color = GPS_OK_COLOR if has_signal else GPS_WAITING_COLOR
+        label.set_markup(
+            f'<span foreground="{color}">{GLib.markup_escape_text(text)}</span>')
 
     # ── Helpers ────────────────────────────────────────────────────────────────
 

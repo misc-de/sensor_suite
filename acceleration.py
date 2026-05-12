@@ -7,7 +7,8 @@ gi.require_version("Adw", "1")
 
 from gi.repository import Gtk, Adw, GLib, Gio
 
-from gps import GeoLocationBackend, format_speed
+from gps import (GeoLocationBackend, GPS_OK_COLOR, GPS_WAITING_COLOR,
+                 NO_GPS_SIGNAL, format_speed)
 
 SERVICE     = "com.nokia.SensorService"
 SOCKET_PATH = "/run/sensord.sock"
@@ -240,6 +241,11 @@ class AccelerationWindow(Adw.ApplicationWindow):
         self._speed_unit_label.add_css_class("dim-label")
         box.append(self._speed_unit_label)
 
+        self._speed_status_label = Gtk.Label()
+        self._speed_status_label.add_css_class("caption")
+        self._speed_status_label.add_css_class("dim-label")
+        box.append(self._speed_status_label)
+
         self._widget = GForceWidget()
         box.append(self._widget)
         self._update_speed_label()
@@ -286,9 +292,13 @@ class AccelerationWindow(Adw.ApplicationWindow):
         return self._settings.get("unit_system", "metric")
 
     def _update_speed_label(self):
+        has_speed = self._speed_mps is not None
         value, unit = format_speed(self._speed_mps, self._unit_system())
-        self._speed_value_label.set_text(value)
+        color = GPS_OK_COLOR if has_speed else GPS_WAITING_COLOR
+        self._speed_value_label.set_markup(
+            f'<span foreground="{color}">{GLib.markup_escape_text(value)}</span>')
         self._speed_unit_label.set_text(unit)
+        self._speed_status_label.set_text("" if has_speed else NO_GPS_SIGNAL)
 
     def open_settings(self):
         SettingsWindow(self, self._settings, self._on_settings_change).present()
